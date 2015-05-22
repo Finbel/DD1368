@@ -10,3 +10,64 @@ django-admin.py startproject mysite
 	En template man skulle kunna använda skulle vara:
 		"django-admin startproject --template=/Users/jezdez/Code/my_project_template myproject"
 
+Arbetar hårt på att få gitignore att fungera.
+
+Hur Django processerar en request
+	1: Django bestämmer root URLconf moduler att använda. Normalt sätt är detta värdet på ROOT_URLONF settingen, men om det inkommande HttpRequest-objektet har attribut som kallas urlconf (definierad av "middlware request processing") kommer detta värden att användas istället för ROOT_URLCONF settings.
+
+	2: Django laddar den Python-modulen och letar efter variabeln urlpatterns. Detta borde vara en Python-lista, som i formatet som returneras av funktionen  django.conf.urls.patterns()
+
+	3: Django kör igenom varje URL-mönster i ordning och stoppar vid den första som matchar den efterfrågade URLen.
+
+	4: När en regex matchar, importerar och kallar Django på den givna "view:en", vilket är en enkel Python-funktion (eller en klassbaserad view). View:en tar emot följande argument
+		- En instans av HttpRequest
+		- Om de matchade reguljära uttrycken inte returnerar några namngivna grupper ges matchningarna från de reguljära uttrycken som positionella argument.
+		- Nyckel-argumenten består av vilka namngivna grupper matchade av de reguljära uttrycken, överskrivna av vilket argument specifierade i de valfria kwargs argumenten till django.conf.urls.url().
+
+	5: Om inga regex matchas, eller om ett exception tas upp under någon punkt under processen kallar Django på en lämplig error-hanterings-view.  
+	
+	^
+	CREATING A PROJECT
+	_________________
+
+	DATABASE SETUP
+
+	mysite/settings.py # Detta är en normal Python module 
+
+	Kommer att köras genom SQLLite
+
+	DATABASES = {
+    	'default': {
+        	'ENGINE': 'django.db.backends.sqlite3',
+        	'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    	}
+    }
+
+	 os.path.join(BASE_DIR, 'db.sqlite3')
+	 innebär att vi kommer att hålla databasfilen i projektmappen
+
+	 Eftersom vi använder SQLite behöver vi itne USER, PASSWORD, HOST etc.
+	 Vi behöver heller inte skapa en databas från början utan kan vara avnjuta Django som gör hela jobbet.
+
+Nu ska vi skapa TABLES i vår databas (innan vi kan använda dem). Detta gör vi genom kommandot:
+
+python manage.py migrate
+
+Migrate kollar på INSTALLED_APPS och skapar alla databas-TABLES i enlighet med settings i mysite/settings.py-filen
+
+Därefter kan man kontrollera sin databas genom 
+
+sqlite3 
+.schema
+^
+DATABASE SETUP
+_____________________________________
+
+THE DEVELOPMENT SERVER
+
+Nu ska vi verifiera att Django-projektet fungerar. Vi byter till den yttre mysite-directory och kör följande kommando: 
+python manage.py runserver 
+
+VI ÄR LAJV½! 
+
+Man kan även passa parametrar till runserver i.e. 8080 för en annan port eller x.x.x.x:port för en annan IP

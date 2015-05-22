@@ -1,0 +1,13 @@
+Kolla django version genom:
+python -c "import django; print(django.get_version())"
+
+Kolla python version genom:
+sudo apt-get install python3
+__________________
+
+Skapa ett django projekt med namnet 'mysite' (både projektet och paktet får namnet mysite) 
+django-admin.py startproject mysite
+	En template man skulle kunna använda skulle vara:
+		"django-admin startproject --template=/Users/jezdez/Code/my_project_template myproject"
+
+Arbetar hårt på att få gitignore att fungera.
