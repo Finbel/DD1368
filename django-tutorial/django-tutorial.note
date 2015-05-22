@@ -71,3 +71,129 @@ python manage.py runserver
 VI ÄR LAJV½! 
 
 Man kan även passa parametrar till runserver i.e. 8080 för en annan port eller x.x.x.x:port för en annan IP
+
+______________________________________
+
+CREATING MODELS
+
+En modell är den enda definitiva källan till information om din data. Den innehåller de essentiella fälten och beteenden om den data du sparar. Generellt, varje modell mappar till ett enda databas-table
+
+Now that your environment - a "project" is set up. SÅ ÄR VI REDO FÖR O KÖRA!
+
+Varje applikation jag skriver i Django är ett Python package som följer en viss konvention. Django genererar bas-strukturen av en app automatiskt, så att vi kan fokusera på att skriva kod istället för att skapa mappar.
+
+Projekt vs appar Vad är skillnaden? En app är web-applikation som gör någonting. T.ex. ett weblog system, en databas över offentliga filer eller en röstnings-applikation. Ett projekt är en samling konfigarioner och applikationer för en specifik web-site. Ett projekt kan innehålla flera applikationer och en applikation kan finnas i flera web-siter.
+
+Dina applikationer kan leva var du vill i din Python path. I denna tutorial kommer vi skapa vår poll app precis brevid vår manage.py fil så att den kan importeras som sin egen top-level modul istället för att vara en submodul till mysite.
+
+För att skapa din applikation, se till att du är i samma directory som manage.py och skriv in följande:
+
+python manage.py starapp polls
+
+Detta skapar en mapp polls som är strukturerad:
+
+polls/
+    __init__.py
+    admin.py
+    migrations/
+        __init__.py
+    models.py
+    tests.py
+    views.py
+
+Detta directory kommer att hålla poll-applikationen. Det första steget i att skriva en databas-web app i django är att definiera dina modelz. Dvs din databas-layout, med extra metadata.
+
+Din model kommer att vara den enda definitiva källan till data om din data. Den innehåller de essentiella fält och beteenden om den data du sparar.
+
+I vår enkla poll applikation kommer vi skapa två modeller: Question och Choice. En Question har en question och ett publikations-datum. En Choice har två fält: Texten för det Choicet och en röstnings"-tally". Varje Choice är associerat till en Question.
+
+Dessa koncept representeras via enkla python-klasser. Ändra polls/models.py-filen så att den ser ut såhär: (tutorial-text)
+
+^
+CREATING MODELS
+_______________________________________
+
+ACTIVATING MODELS
+
+Med denna information som modellerna har kan Django skapa ett databas-schema för appen, samt skapa en 
+Python databas-access API för att komma åt Questions och Choice objects.
+
+Django appar är "pluggable" dvs du kan använda dem i flera olika projekt. Du kan distrubuera dina appar eftersom de inte behöver vara kopplade till en given django-installation.
+
+-- Gå in i mysite/settings.py filen igen och ändra INSTALLED_APPS till att inkludera 'polls'
+
+Nu vet Django att den ska inkludera polls appen. 
+
+Låt oss köra ett annat kommando:
+
+python manage.py makemigrations polls
+
+När vi kör makemigration berättar vi för Django att vi gjort lite förändringar till modellerna (i detta fallet vi har gjort nya) och att vi skulle vilja att de förädringarna är sparade som en "migration"
+
+En migration är alltså att spara en förändring vi gjort i vår databas
+
+kommandot sqlmigrate kommandot tar migration-namen och returnerar deras SQL:
+
+vi får t.ex:
+
+BEGIN;
+	CREATE TABLE "polls_choice" ("id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, "choice_text" varchar(200) NOT NULL, "votes" integer NOT NULL);
+
+	CREATE TABLE "polls_question" ("id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, "question_text" varchar(200) NOT NULL, "pub_date" datetime NOT NULL);
+
+	CREATE TABLE "polls_choice__new" ("id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, "choice_text" varchar(200) NOT NULL, "votes" integer NOT NULL, "question_id" integer NOT NULL REFERENCES "polls_question" ("id"));
+
+	INSERT INTO "polls_choice__new" ("choice_text", "votes", "id", "question_id") SELECT "choice_text", "votes", "id", NULL FROM "polls_choice";
+
+	DROP TABLE "polls_choice";
+
+	ALTER TABLE "polls_choice__new" RENAME TO "polls_choice";
+
+	CREATE INDEX "polls_choice_7aa0f6ee" ON "polls_choice" ("question_id");
+
+Värt att notera:
+
+	- Den exakta outputen beror på vilken databas vi använder (detta är för SQLite)
+	- Namnen genereras automatiskt av namnet på appen följt av namnet på modellen (kolumnen)
+		i.e. polls_question och polls_choice (detta går att ändra på)
+	- Primary Keys (Ds) genereras automatiskt (detta går att ändra på)
+	- Av konvention lägger django till "_id" till foreign key field name (detta går att ändra på)
+		i.e "question" blir "question_id"
+	- Denna foreign key relationen skapas explicit av en av en FOREIGN KEY constraint. Oroa er inte av 
+	  DEFERRABLE delen (inte i sqllite) Det är bara ettk ommando som säger åt PostgreSQL att inte tvinga på Foreign key till att transationen är över.
+	- Den är skräddarsydd för databasen du använder så att vissa databasspecifika-fält hanteras automatiskt 
+	  samma gäller citering i fält. ie. " eller '.
+	- sqlmigrate-kommandot kör faktiskt inte migrationen till din databas. Den printar endast så att du kan se 
+	  vad SQL-Django tänker krävs. Det är användbart för att kolla vad Django kommer att göra om du har databas-administratörer som kräver SQL-scripts för förändringar.
+
+Du kan pröva att köra 
+python manage.py check
+Denna kollar för några problem i ditt projekt utan att göra någon migration eller röra databasen.
+
+Nu kör vi migrate igen för att skapa de modellerna i din databas.
+
+Migrate kommandot tar alla migrationer som inte har applicerats (Django trackar vilka som har applicerats genom ett speciellt table i vår databas som kallas för django_migrations) och kör dem mot din databas essentiellt. synkroniserar de förändringar du gjort till de modeller med schemat i din databas.
+
+Migrations är väldigt kraftfulla och låter dig förändra modeller över tid, när du utvecklar ditt projekt, utan behovet att ta bort din databas eller tables och göra nya. Den specialiserar i att uppgradera din databas live utan att förlora data. Vi kommer gå igenom dem djupare senare, men för tillfället kom ihåg tre-steg guiden till att göra modell-förändringar.
+
+	 - För en förändring i dina modeller (i models.py)
+	 - Kör python manage.py makemigrations
+	 - Kör python manage.py migrate
+_________________________________
+
+PLAYING WITH THE API
+
+Nu! Låt oss hoppa in och leka med det API du får från Django. För att aktivera python shell skriv:
+
+python manage.py shell
+
+Vi använder detta istället för att skriva python för att manage.py sätter DJANGO_SETTINGS_MODULE environment variabeln, vilket ger Django python-import-path till din mysite/settings.py file.
+
+Du kan skippa detta och bara köra python
+
+Då kör du DJANGO_SETTINGS_MODULE variabeln till mysite.settings, startar python och sätter upp django:
+
+import django
+django.setup()
+
+Nu är det dags att utforska database API: (!!!!! :D :D :D !!!!!!)
