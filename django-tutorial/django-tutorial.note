@@ -1,0 +1,7 @@
+Kolla django version genom:
+python -c "import django; print(django.get_version())"
+
+Kolla python version genom:
+sudo apt-get install python3
+
+
