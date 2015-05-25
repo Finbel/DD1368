@@ -1,3 +1,5 @@
+SAK JAG INTE FÖRSTOD: RequestContext -> Shortcut: Render() i tutorial 3 
+
 Kolla django version genom:
 python -c "import django; print(django.get_version())"
 
@@ -490,3 +492,217 @@ På ett liknande sätt kan du kanske vilja skräddarsy utseendet ochkänslan av 
 Som default så visas alla appar i INSTALLED_APPS som har registrerats med admin-applikationer i alfabetisk ordning. Du kanske vill göra större förändringar till layouten, trots allt, index är möjligtvis den viktigaste delen för admin och bör vara lätt att använda.
 
 För att justera mallen ska vi göra precis som vi gjorde med base_site.html fast med index.html.
+
+_____________________________________________
+
+BOOM! TUTORIAL 3 HERE WE COME DICK SWINGIN LIKE A BAWZ
+
+FILOSOFI:
+
+En "view" (vy) är en typ av webb-sida i din django-applikation som generellt fyller som en specifik funktion och har en specifik mall. T.ex, i en blogg-applikation kan du ha följande vyer:
+
+- Blogg homepage - visar de senaste inläggen
+- Entry "detail" page - permalink sida för ett enskiljt inlägg
+- Year-based archive page - Visar alla månader med inlägg i ett givet år
+- Month-based archive page - visar alla dagar med inlägg  i en given månad
+- Day-based archive page - visar alla inlägg under en given dag
+- Comment action - hanterar postandet av en kommentar på ett givet inlägg
+
+I vår pollapplikation kommer vi att ha följande fyra vyer:
+
+- Question "index" page - Visar de senaste frågorna
+- Question "detail" page - visar en fråge-text utan resultat men med ett formulär för att rösta
+- Question "results" page - visar resultat för en specifik fråga
+- Vote action - hanterar röstning för ett specifikt val på en specifik fråga.
+
+I django levereras web-sidor och annat material via views. Varje vy representeras av en enkel Python funktion (eller metod, i fallet om klass-baserade vyer). Django kommer att välja en vy genom att undersöka URL:en som efterfrågas (för att vara exakt URL:en efter domännamnet).
+
+ett URL-pattern är helt enkelt den generella formen på en url. T.ex. /newsarchive/<year>/<month>/
+
+För att gå från en URL till en vy använder django någonting som kallas 'URLconfs'. en URLconf mappar ett URL-mönster (beskrivet via regex) till vyer.
+
+Denna tutorial förser dig med de grundläggande instruktionerna i användandet av URLconfs och du kan referera till django.core.urlresolvers för mer information.
+___________________________
+
+WRITE YOUR FIRST VIEW
+
+Låt oss skriva får första vy. Öppna polls/views.py och lägg in följande Python-kåd i den.
+
+from django.http import HttpResponse
+
+def index(request):
+	return HttpResponse("Hello, world. You're at the polls index.")
+
+För att kalla på den här vyn behöver vi mappa den till en URL och för detta behöver vi en URLconf.
+
+För att skapa en URLconf i polls-mappen, skapa en fil som heter urls.py och fyll den med följande text:
+
+from django.conf.urls import patterns, url
+
+from polls import views
+
+urlpatterns = patterns('',
+	url(r'^$', views.index, name='index'),
+)
+
+Nästa steget är att peka URLconf:en mot polls.urls modulen. I mysite/urls.py sätt in en include(),
+
+url() tar in ett antal argument, det första är ett reguljärt uttryck, dessa uttryck matchar inte mot domännamn samt GET eller POST-uttryck.
+
+Det andra argumentet är vyn. När django har hittat en match för uttrycket kallar django på den specifierade vy-funktionen med ett HttpRequest-objekt som första argumentet och "fångade" värden från det reguljära uttrycket som andra argument. Om regexet använder "enkel capture" skickas värden som positionella argument; om det använder "named captures" skickas värden som nyckelordsargument. Vi ska ge ett exempel av detta senare.
+
+url() argument: kwargs ett godtyckligt nyckelord kan skickas i ett lexikon till mål-vyn. Vi tänker inte använda denna funktionen i django-tutorialen.
+
+url() argument: name
+Att namnge din URL låter dig referera till den otvetydigt från andra platser i django, specifikt mallar. Denna kraftfulla feature låter dig göra globala förändringar i ditt URL-mönster av dina projekt och endast röra vid en enda fil.
+_________________________
+
+WRITING MORE VIEWS
+
+Nu lås oss lägga till fler vyer till polls/views.py. Dessa vyer är smått annorlunda för att dem tar ett argument.
+
+Därefter knyter vi dessa ny vyer till polls.urls modulen genom att lägga till följande url()-calls
+
+Nu om vi testar att köra "polls/34" får vi "You're looking att question 34". 
+Den kör detail() metoden och visar vilken ID du valt att förs i URL:en.
+
+När någon frågar efter en sida från din websida - låt oss säga "polls/34/", laddar django mysite.urls Python-moduler eftersom den pekar på ROOT_URLCONF inställningarna. Den finner variabel-namnet urlpatterns och går igenom det reguljära uttrycket i ordning. Include() funktionerna vi använder refererar helt enkelt till en annan URLconfs. Notera att reguljära uttryck för include() funktioner inte har ett $ på slutet, den kommer helt enkelt att hugga av vad den än matchat hittills och skicka den kvarvarande strängen till den inkluderade URLconfen för vidare processering.
+
+Idén bakom include() är att göra det lätt att plug-and-play URL:er. Eftersom polls är i sin egen URLconf (polls/urls.py) kan de placeras under polls eller under /fun_polls/ eller under /content/polls/ eller vilken rot-mapp som helst och fortfarande fungera.
+
+Här är vad som händer om en användare går till /polls/34/ i det här systemet
+
+Django hittar matchen '^polls/'
+
+Django tar bort "polls/" och skickar resterande "34/" till 'polls.urls' URLconf för att vidare processeras, vilket i sin tur matchar r'^(?P<question_id>\d+)/$' vilket leder till att den kallar details() view såhär:
+
+detail(request=<HttpRequest object>, question_id='34')
+
+question_id='34' kommer från (?<question_id>\d+) paranteserna "fångar texten" matchat med det mönstret. ?P<question_id> definierar namnet som ska användas för att identifiera det matchade mönstret.
+
+_________________________________________________
+
+WRITE VIEWS THAT ACTUALLY DO SOMETHING
+
+Varje view är ansvarig för att göra en av två saker: Returnera ett HttpResponse objekt bärandes på innehållet för den efterfrågade sedan, eller kasta ett exception som t.ex. Http404. Resten är upp till dig.
+
+Din vy kan läsa information från databasen, eller inte. Den kan använda ett template-system som t.ex. django's - eller ett tredje-parts Python template-system - eller inte. Det kan generera en PDF-fil, output XML, skapa en ZIP-fil, vad du vill, användade vilket Python-bibliotek du än vill.
+
+Allt django vill ha är den där HttpResponsen, eller ett exception.
+
+Eftersom det är bekvämt, låt oss använda django's egna databas API, vilken vi tittade på i Tutorial 1. Här är ett försök på en ny index() view, vilken visar de fem senaste polll-frågorna i systemet separerade av comman enligt publikationsdatum:
+
+polls/views.py
+
+def index(request):
+	latest_question_list = Question.objects.order_by('-pub_date')[:5]
+	output = ', '.join([p.question_text for p in latest_question_list])
+	return HttpResponse(output)
+
+	# Lämna resten oförändrat
+
+	Det finns ett problem här dock. Sidans design är hårdkodad i vyn. Om du vill ändra hur sidan ser ut måste du endra dess python kåd. Låt oss använda djangos mall-system för att seprarera designen från Python genom att använda en mall som vår vy kan använda.
+
+	Först, skapa en mapp som heter templates i vår polls-mapp
+
+	Organisering av templates.
+
+	Vi SKULLe kunna ha alla våra templates tillsammans i en stor templates-mapp och det skulle fungera perfekt. Men! Denan mall hör till polls-applikationen så till skillnad från admin-templaten vi skapade i förra tutorialen så ska vi stoppa denna i applikationens template-mapp (polls/template) istället för i projektets. Vi pratar mer om varför vi gör detta i "reusable apps" tutorialen.
+
+	Innuti templates directory vi precis skapat, skapa ett till directory som heter polls och i det skapa en fil som heter index.html
+
+	Template namespacing
+	Nu kanske vi kan komma undan med att sätta våra templates i polls/templates (istället för att skapa ännu en polls submapp) men detta skulle faktiskt vara en dålig ide. Django vill välja den första template den hittar vars namn matchar och om du hade en template med samma namn i en annan applikation skulle django inte kunna särskilja dem. Vi behöver därför kunna peka django till den korrekta. Enklaste sättet är att s.k. namespace:a dem. Dvs. sätta deras templates innuti en annan mapp med namnet för applikationen själv.
+
+	Nu låt oss uppdatera vår index view i polls/views.py för att använda denna template
+
+	A SHORTCUT: RENDER()
+
+	Det är väldigt vanligt dialektalt att ladda en demplate, fylla en kontext och returnera ett HttpResonse objekt med resultatet av den renderade mallen. Django ger en genväg till detta, här är fulla index() vyn omskriven:
+
+______________________________
+
+RAISING A 404 ERROR
+
+Nu ska vi försöka tackla question-detail view. Sidan som visar upp fråge-texten för en given poll. 
+Här är vyn:
+
+from django.http import Http404
+from django.shortcuts import render
+from polls models import Question
+
+#...
+
+def detail(request, question_id):
+	try:
+		question = Question.objects.get(pk=question_id)
+	except Question.DoesNotExist:
+		raise Http404("Question does not exist")
+	return render(request, 'polls/details.html', {'question':question})
+
+Här har vi ett nytt koncept. Vyn skapar ett Http404 exception om en fråga med ett efterfrågat ID inte existerar.
+
+Vi ska diskutera vad du kan sätta i polls/details.html templaten snart men om du vill snabbt ta det till ovanstående fungerande exempel, en fil som endast innehåller:
+
+{{ question }}
+
+kommer att fungera.
+____________________________
+
+EN GENVÄG: get_object_or_404()
+
+Det är väldigt vanligt dialektalt att använda get() och kalla på ett Http404 om objektet inte finns. Django har därför skapat en genväg, såhär kan man skriva detail...
+
+get_object_or_404() funktioenn tar en django-modell som sitt första argument och et godtycklig siffra som keyword-argument. Dessa passas till get-funktionen av modellens manager. Den kör en Http404 om objektet inte existerar.
+
+Filosofi:
+
+Varför använder vi en hjälpfunktion get_object_or_404() istället för att automatiskt fånga ObjectDoesNotExist-exceptions på en högre nivå, eller ha model APO skapa en Http404 istället för ObjectDoesNotExist?
+
+För att det skulle koppla model-lagret till view-lagret. En av de största design-målen med Django är att bibehålla loose coupling. Viss kontrollerad coupling är introducerad i django.shortcuts modulen.
+
+Det finns även en get_list_or_404() funktion, den fungerar precis som get_object_or_404(), bortsett från att den använder filter() istället för get(). Den kallar på 404 om listan är tom.
+
+_______________________________________
+
+USE THE TEMPLATE SYSTEM
+
+Tillbaka till detail() vyn för vår poll applikation. Givet contextens variabel question, här är hur polls/detail.html template skulle kunna se ut.
+
+<h1>{{ question.question.text}}</h1>
+<ul>
+{% for choice in question.choice_set.all %}
+	<li>{{ choice.choice_text }}</li>
+{% endfor %}
+</ul>
+
+Mall-systemet använder dot-lookup syndax för att komma åt variabel-attributer. I exemplet av {{ question.question_text }}, först gör django en lexikon-koll över objektet question. När den misslyckas med det testar den en attribut-loopup, vilket fungerar i detta fallet. Om attribut-lookupen hade misslyckats hade vi prövat en list-index lookup.
+
+Medot-calling sker i forloopen. question.choice_set.all tolkas som python koden question.choice_set.all(), vilken returnerar en lista av choice objekt och är lämplig för att använda i for-tagen
+
+Se template guide för mer info om templates.
+__________________________
+
+REMOVING HARDCODED URLs IN TEMPLATES
+
+Kom ihåg, när vi skrev länken till question i polls/index.html template, länken var delvis hårdkodad:
+<li><a href="/polls/"{{ question.id }}/">{{ question.question_text }}</a></li>
+
+Problemet med denna hårdkådade tight-kopplade inställningen är att det blir svårt att ändra URLs på projekt med många mallar. Dock! eftersom du definierade namnet argument i url()-funktionen i polls.urls-modulen kan du ta bort beroendet av specifika URL-vägar definierade i din url-konfiguration genom att använda {% url %} mall-taggen.
+
+<li><a href="{% url 'detail' question.id %}">{{ question.question_text }}</a></li>
+
+Det fungerar som så att genom att kolla upp URL-definitionen som specifierad i polls.url modulen. Kan du se exakt vart URL-namnet av details är definierat härunder.
+
+_______________________________
+
+NAMESPACING URL NAMES
+
+Denna tutorial har endast en app, polls. I verkliga Django-projekt kan det finnas fem, tio, tjugo appar eller fler. Hur gör django för att differentiera URL-namnen mellan dem, t.ex. polls-appen har en detail-vy och det kan en app på samma projekt ha. Hur gör någon för att fixa så att django vet vilken app vy den ska skapa för en url när den använder sig av {% url %} mall-taggen?
+
+Svaret är att den lägger till namespaces till roten av URLconf. I mysite/urls.py filen, ändra den så att den innehåller namespacing
+
+Därefter ändra polls/index.html template från 
+<li><a href="{% url 'detail' question.id %}">{{ question.question_text }}</a></li>
+
+så att den pekar på den namespace:ade detail-vyn
